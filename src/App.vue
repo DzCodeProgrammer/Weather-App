@@ -1,6 +1,8 @@
 <template>
   <main class="container mx-auto px-4 py-10 min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-700 via-blue-400 to-yellow-200">
-    <div class="w-full max-w-xl mx-auto bg-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl p-6 sm:p-10 border border-white/20">
+    <div class="w-full max-w-xl mx-auto bg-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl p-6 sm:p-10 border border-white/20 relative overflow-hidden">
+      <!-- Decorative gradient circle -->
+      <div class="absolute -bottom-16 -left-16 w-56 h-56 bg-accent/20 rounded-full blur-3xl pointer-events-none"></div>
       <header class="text-center mb-6">
         <h1 class="text-4xl font-extrabold text-white drop-shadow-md flex items-center justify-center gap-2">
           <svg class="w-8 h-8 text-yellow-300 animate-spin-slow" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-opacity="0.3"/><path d="M12 2v4" stroke-linecap="round"/><path d="M12 18v4" stroke-linecap="round"/><path d="M2 12h4" stroke-linecap="round"/><path d="M18 12h4" stroke-linecap="round"/></svg>
@@ -10,9 +12,12 @@
       </header>
 
       <section class="mb-6">
-        <SearchBar v-model="city" @search="onSearch" />
-        <div class="mt-2 flex justify-between text-white/80 text-sm">
-          <button @click="useGeolocation" class="underline hover:text-accent transition">📍 Gunakan lokasiku</button>
+        <SearchBar v-model="city" :loading="loading" @search="onSearch" />
+        <div class="mt-2 flex flex-col sm:flex-row justify-between items-center text-white/80 text-sm gap-2">
+          <button @click="useGeolocation" class="underline hover:text-accent transition flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v2m0 16v2m10-10h-2M4 12H2m15.07-7.07l-1.42 1.42M6.34 17.66l-1.42 1.42m12.02 0l-1.42-1.42M6.34 6.34L4.92 4.92" /></svg>
+            Gunakan lokasiku
+          </button>
           <label class="inline-flex items-center gap-2">
             <span>Unit</span>
             <select v-model="units" @change="reloadIfWeather" class="px-2 py-1 rounded-lg text-slate-800 bg-white/80 focus:ring-accent/60">
@@ -28,7 +33,7 @@
         <div v-else-if="error" key="error" class="text-center text-red-100 bg-red-500/30 border border-red-300/50 rounded-xl p-3 animate-shake">
           {{ error }}
         </div>
-        <WeatherCard v-else-if="weather" :weather="weather" key="weather" />
+        <WeatherCard v-else-if="weather" :weather="weather" :units="units" key="weather" />
       </transition>
 
       <section class="mt-6" v-if="history.length">
@@ -65,6 +70,10 @@ const loading = ref(false)
 const error = ref('')
 const history = ref(JSON.parse(localStorage.getItem('wa-history') || '[]'))
 
+// Tambahan: simpan tipe pencarian & koordinat terakhir
+const lastSearchType = ref('city') // 'city' atau 'geo'
+const lastCoords = ref({ lat: null, lon: null })
+
 const saveHistory = (name) => {
   const s = new Set([name, ...history.value])
   history.value = Array.from(s).slice(0, 8)
@@ -75,6 +84,7 @@ const onSearch = async (name) => {
   if (!name) return;
   error.value = ''
   loading.value = true
+  lastSearchType.value = 'city'
   try {
     const url = new URL('https://api.openweathermap.org/data/2.5/weather')
     url.searchParams.set('q', name)
@@ -105,6 +115,8 @@ const useGeolocation = () => {
       error.value = ''
       loading.value = true
       const { latitude, longitude } = pos.coords
+      lastSearchType.value = 'geo'
+      lastCoords.value = { lat: latitude, lon: longitude }
       const url = new URL('https://api.openweathermap.org/data/2.5/weather')
       url.searchParams.set('lat', latitude)
       url.searchParams.set('lon', longitude)
@@ -127,8 +139,41 @@ const useGeolocation = () => {
   }, { enableHighAccuracy: true, timeout: 10000 })
 }
 
+// Perbaiki reloadIfWeather agar fetch ulang sesuai tipe pencarian terakhir
 const reloadIfWeather = () => {
-  if (city.value) onSearch(city.value)
+  if (lastSearchType.value === 'city' && city.value) {
+    onSearch(city.value)
+  } else if (
+    lastSearchType.value === 'geo' &&
+    lastCoords.value.lat !== null &&
+    lastCoords.value.lon !== null
+  ) {
+    fetchByCoords(lastCoords.value.lat, lastCoords.value.lon)
+  }
+}
+
+// Tambahkan fungsi fetchByCoords
+const fetchByCoords = async (lat, lon) => {
+  error.value = ''
+  loading.value = true
+  try {
+    const url = new URL('https://api.openweathermap.org/data/2.5/weather')
+    url.searchParams.set('lat', lat)
+    url.searchParams.set('lon', lon)
+    url.searchParams.set('appid', API_KEY)
+    url.searchParams.set('units', units.value)
+    url.searchParams.set('lang', 'id')
+    const res = await fetch(url)
+    if (!res.ok) throw new Error('Lokasi tidak ditemukan')
+    weather.value = await res.json()
+    city.value = weather.value.name || ''
+    if (city.value) saveHistory(city.value)
+  } catch (e) {
+    error.value = e.message || 'Gagal mengambil lokasi'
+    weather.value = null
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
