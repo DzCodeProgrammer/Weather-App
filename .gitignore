@@ -7,7 +7,66 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Dependencies
+# Dependencies# -----------------------------------------------------
+# LOG FILES
+# -----------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# -----------------------------------------------------
+# DEPENDENCIES & BUILD OUTPUTS
+# -----------------------------------------------------
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Vite cache
+.vite/
+
+# Vercel cache
+.vercel/
+
+# -----------------------------------------------------
+# ENVIRONMENT VARIABLES
+# -----------------------------------------------------
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# -----------------------------------------------------
+# SYSTEM FILES
+# -----------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# -----------------------------------------------------
+# EDITOR / IDE FILES
+# -----------------------------------------------------
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# JetBrains
+*.iml
+
+# -----------------------------------------------------
+# MISC
+# -----------------------------------------------------
+*.bak
+*.tmp
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 node_modules/
 dist/
 dist-ssr/
